@@ -3,9 +3,18 @@ import React, {Component} from 'react';
 import Moment from 'react-moment';
 import Map from './Map';
 import './App.css';
+const _ = require("lodash");
+const { compose, withProps, lifecycle } = require("recompose");
 
-const googleMapURL = `https://maps.googleapis.com/maps/api/js?libraries=geometry,drawing&key=${process.env.REACT_APP_MAPS_API_KEY}`;
+const googleMapURL = `https://maps.googleapis.com/maps/api/js?libraries=places,geometry,drawing,places&key=${process.env.REACT_APP_MAPS_API_KEY}`;
 
+const MapWithProps = withProps({
+  googleMapURL,
+  loadingElement:<p>Loading maps...</p>,
+  containerElement: <div className="map-container" />,
+  mapElement:<div className="map" />
+  }
+)(Map);
 class App extends Component {
   constructor(props) {
     super(props);
@@ -81,14 +90,45 @@ class App extends Component {
       insideFence,
     });
   }
-
+  printPolygonVertices = (pathObj) => {
+    console.log('printing polygon vertices');
+    let polygon = pathObj.j[0].j;
+    for( let vertex of polygon) {
+      console.log(vertex.lat(),vertex.lng());
+    }
+  }
   doneDrawing(polygon) {
     if (this.state.previousPolygon) {
       this.state.previousPolygon.setMap(null);
     }
 
     this.setState({previousPolygon: polygon});
-
+    console.log('this is polygon',polygon);
+    const options = {
+      editable: true,
+      draggable: true,
+      opacity: 0,
+      strokeOpacity: 0.5,
+      strokeColor: '#00ffa0',
+      strokeWeight: 3,
+      fillOpacity:0,
+    }
+    polygon.setOptions(options);
+    const customPolygon1 = [
+      {lat:14,lng:80},
+      {lat:13,lng:80},
+      {lat:14,lng:81},
+    ];
+    const customPolygon2 = [
+      {lat:14,lng:80},
+      {lat:13,lng:81},
+      {lat:14,lng:81},
+    ]
+    const customPolygons = [customPolygon1,customPolygon2];
+    polygon.setPaths(customPolygons);
+    console.log('inside function done drawing, these are polygon vertices, ', polygon.getPaths());
+    // console.log('inside function done drawing, these are polygon vertices, ', polygon.getPath());
+    this.printPolygonVertices(polygon.getPaths());
     this.setState({
       fence: new google.maps.Polygon({
         paths: polygon.getPaths(),
@@ -120,17 +160,8 @@ class App extends Component {
         <p>
           Last fetched: <Moment interval={10000} fromNow>{this.state.lastFetched}</Moment>
         </p>
-        <Map
-          googleMapURL={googleMapURL}
-          loadingElement={
-            <p>Loading maps...</p>
-          }
-          containerElement={
-            <div className="map-container" />
-          }
-          mapElement={
-            <div className="map" />
-          }
+        <MapWithProps
+         
           center={this.state.center}
           content={this.state.content}
           doneDrawing={this.doneDrawing.bind(this)}
